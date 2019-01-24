@@ -1,0 +1,14 @@
+{
+    "name": "root/htmltodocx",
+    "description": "Print dox files from html string.",
+    "authors": [
+        {
+            "name": "Orlando Sergio Dominguez",
+            "email": "serggio@msn.com"
+        }
+    ],
+    "require": {
+        "phpoffice/phpword": "^0.16.0",
+        "katzgrau/klogger": "dev-master"
+    }
+}
