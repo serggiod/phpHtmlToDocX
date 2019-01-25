@@ -4,6 +4,13 @@
 
         protected $Log;
         protected $Word;
+        protected $XMLDom;
+
+        protected $charsHTM = ['<br>','<BR>','<br/>','<BR/>','&nbsp;'];
+        protected $charsDOC = ['\n','\n','\n','\n','\ '];
+
+        protected $stringHT5A = '/(<header)|(<nav)|(<section)|(<article)|(<aside)|(<footer)/i';
+        protected $stringHT5B = '/(<\/header>)|(<\/nav>)|(<\/section>)|(<\/article>)|(<\/aside>)|(<\/footer>)/i';
 
         protected $htmlPath;
         protected $docxPath;
@@ -13,10 +20,14 @@
         public function __construct($pathHtml,$pathDocx){
 
             $this->Log = new Katzgrau\KLogger\Logger(__DIR__.'/../logs');
-            $this->Log->info('Clase KLogger Instanciada.');
+            $this->Log->info('Clase KLogger instanciada.');
 
             $this->Word = new \PhpOffice\PhpWord\PhpWord();
             $this->Log->info('Clase PhpWord instanciada.');
+
+            $this->HTML = new DOMDocument();
+            $this->HTML->preserveWhiteSpace = TRUE;
+            $this->Log->info('Clase DOMDocument instanciada.');
 
             $htmlPath = array();
             $docxPath = array();
