@@ -9,6 +9,8 @@
     ],
     "require": {
         "phpoffice/phpword": "^0.16.0",
-        "katzgrau/klogger": "dev-master"
+        "katzgrau/klogger": "dev-master",
+        "symfony/dom-crawler": "^4.2",
+        "symfony/css-selector": "^4.2"
     }
 }

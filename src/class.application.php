@@ -1,85 +1,71 @@
 <?php
     class Application extends ApplicationBase{
 
-        private $html;
-        private $XMLHead;
-        private $XMLBody;
+        private $fontName;
+        private $fontSize;
+        private $zoom;
 
-        private function loadHTML(){
-            $this->html = file_get_contents($this->htmlPath);
-        }
+        public function __construct($pathHtml,$pathDocx)
+        {
 
-        private function normalizeHTML(){
-            $this->html = str_replace(
-                $this->charsHTM,
-                $this->charsDOC,
-                $this->html
-            );
-
-            $this->html = preg_replace(
-                $this->stringHT5A,
-                '<div',
-                $this->html
-            );
-
-            $this->html = preg_replace(
-                $this->stringHT5B,
-                '</div>',
-                $this->html
-            );
-        }
-
-        private function transformXML(){
-            $this->HTML->loadHTML(
-                $this->html
-            );
-
-            /*$style = '';
-            $styles = $this->HTML->getElementsByTagName('style');
-            foreach($styles as $s) if($s->tagName=='style') $style .= $s->textContent;
-            $style = str_replace(["\n","\t","\b"],"",$style);
-            echo($style);*/
-            //print_r(explode($style,'.'));
-            //$styleN = explode(,'.');
-            //print_r($styleN);
-
-            /*$this->XMLBody = $this->HTML->getElementsByTagName("body");
-
-            echo "Header:\n";
-            //print_r($this->XMLHead);
-            print_r($this->XMLHead[0]);
-            //foreach($this->XMLHead as $head) print_r($head);
-            echo "Body:\n";
-            print_r($this->XMLBody);*/
-
-            $body = $this->HTML->getElementsByTagName("body");
-            print_r($body->childNodes);
-        }
-
-        public function __construct($pathHtml,$pathDocx){
             parent::__construct($pathHtml,$pathDocx);
+
         }
-        public function createDocx(){
-            if($this->boolPathHtml==TRUE && $this->boolPathDocx==true){
 
-                $this->loadHTML();
-                $this->normalizeHTML();
-                $this->transformXML();
+        public function createDocx($info,$config)
+        {
+            if(is_int($config["zoom"])==TRUE) $this->Word->getSettings()->setZoom($config["zoom"]);
+            if($config["mirrorMargins"]==TRUE)$this->Word->getSettings()->setMirrorMargins(TRUE);
+            if($config["decimalSymbol"]==".") $this->Word->getSettings()->setDecimalSymbol(".");
+            if($config["decimalSymbol"]==",") $this->Word->getSettings()->setDecimalSymbol(",");
+            if($config["revisionView"]==TRUE) $this->Word->getSettings()->setRevisionView(TRUE);
+            if($config["updateFields"]==TRUE) $this->Word->getSettings()->setUpdateFields(TRUE);
+            if(!is_null($config["themeFontLang"]))
+            {
+                $lang = new Language();
+                $lang->setLangId(Language::$config["themeFontLang"]);
+                $this->Word->getSettings()->setThemeFontLang($lang);
+            }
 
-                //$this->setHtml();
+            // Corrector gramatical y ortografico.
+            if($config["hideSpellingErrors"]==TRUE)    $this->Word->getSettings()->setHideSpellingErrors(TRUE);
+            if($config["hideGrammaticalErrors"]==TRUE) $this->Word->getSettings()->setHideGrammaticalErrors(TRUE);
+            if($config["proofState"]=='CLEAN'||$config["proofState"]=='DIRTY')
+            {
+                $state = new ProofState();
+                $state->setGrammar(ProofState::$config["proofState"]);
+                $state->setSpelling(ProofState::$config["proofState"]);
+                $this->Word->getSettings()->setProofState($state);
+            } 
+            
+            // Seguimiento de cambios.
+            if($config["trackRevisions"      ]==TRUE) $this->Word->getSettings()->setTrackRevisions(TRUE);
+            if($config["doNotTrackMoves"     ]==TRUE) $this->Word->getSettings()->setDoNotTrackMoves(TRUE);
+            if($config["doNotTrackFormatting"]==TRUE) $this->Word->getSettings()->setDoNotTrackFormatting(TRUE);
+            
+            // Protección por password.
+            if($config["documentProtection"][0]==TRUE)
+            {
+                $documentProtection = $this->Word->getSettings()->getDocumentProtection();
+                $documentProtection->setEditing(DocProtect::$config["documentProtection"][1]);
+                $documentProtection->setPassword($config["documentProtection"][2]);
+            }
+            
+            
+            // Separación.
+            if($config["autoHyphenation"]==TRUE) $this->Word->getSettiongs()->setAutoHyphenation(TRUE);
+            if(is_int($config["consecutiveHyphenLimit"])==TRUE) $this->Word->getSettiongs()->setConsecutiveHyphenLimit($config["consecutiveHyphenLimit"]);
+            if($config["doNotHyphenateCaps"]==TRUE) $this->Word->getSettiongs()->setDoNotHyphenateCaps(TRUE);
+            if($config["hyphenationZone"]==TRUE)
+            {
+                $this->Word->getSettiongs()->setHyphenationZone(
+                    \PhpOffice\PhpWord\Shared\Converter::cmToTwip(1)
+                );
+            }
 
-                /*$section = $this->Word->addSection();
-                //$section->addText("Hola Mundo!");
-                \PhpOffice\PhpWord\Shared\Html::addHtml($section,$this->html,true,true);
+            //$this->Word->setDefaultFontName($this->fontName);
+            //$this->Word->setDefaultFontSize($this->fontSize);
 
-                $docxPath = basename($this->htmlPath,".html");
-                $docxPath = $this->docxPath . "/" . $docxPath . ".docx";
-                $this->Log->info("Crear archivo en: " . $docxPath);
-
-                $WordWriter = \PhpOffice\PhpWord\IOFactory::createWriter($this->Word,"Word2007");
-                $WordWriter->save($docxPath);*/
-                
-            } else $this->Log->error("Se ha detenido la construccion del documento.");
         }
         public function __destruct(){
             parent::__destruct();

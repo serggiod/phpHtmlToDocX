@@ -1,9 +1,17 @@
 <?php
 
+    use \Katzgrau\KLogger\Logger;
+    use \PhpOffice\PhpWord\PhpWord;
+    use \Symfony\Component\DomCrawler\Crawler;
+    use \Symfony\Component\CssSelector\CssSelectorConverter;
+
     class ApplicationBase{
 
         protected $Log;
+        protected $Dom;
+        protected $Html;
         protected $Word;
+        protected $Selector;
         protected $XMLDom;
 
         protected $charsHTM = ['<br>','<BR>','<br/>','<BR/>','&nbsp;'];
@@ -17,17 +25,91 @@
         protected $boolPathHtml;
         protected $boolPathDocx;
 
+        protected function loadHTML(){
+            $this->Html = file_get_contents($this->htmlPath);
+            $this->Log->info("Se ha cargado el contenido del archivo html.");
+        }
+
+        protected function normalizeHTML(){
+
+            $this->Html = str_replace(
+                $this->charsHTM,
+                $this->charsDOC,
+                $this->Html
+            );
+
+            $this->Html = preg_replace(
+                $this->stringHT5A,
+                '<div',
+                $this->Html
+            );
+
+            $this->Html = preg_replace(
+                $this->stringHT5B,
+                '</div>',
+                $this->Html
+            );
+
+            $this->Log->info("Se ha normatlizado el contenido html.");
+
+        }
+
+        protected function parseHTMLToDOMElements(){
+
+            $this->Dom = new Crawler(
+                $this->Html
+            );
+            $this->Log->info("Clase Symfony/Crawler instanciada.");
+
+            $this->Selector = new CssSelectorConverter();
+            $this->Log->info("Clase Symfony/CSS-Selector instanciada.");
+
+        }
+
+        protected function parseCssStyleToWordStyle()
+        {
+            $style = '';
+            $nodesStyles = $this->Dom->filter("style");
+            foreach($nodesStyles as $n) if($n->nodeName=="style") $style .= $n->nodeValue;
+
+            $arrayStyle = explode('.',$style);
+            foreach($arrayStyle as $s){
+
+                $iniAnchor = strpos($s,'{');
+                $endAnchor = strpos($s,'}');
+
+                $styleName = substr(
+                    $s,
+                    0,
+                    $iniAnchor
+                );
+
+                $fontName = null;
+                $fontSize = null;
+                $color = null;
+                $bold = null;
+
+                $this->Word->addFontStyle(
+                    $styleName,
+                    array(
+                        "name" => $fontName,
+                        "size" => $fontSize,
+                        "color" => $color,
+                        "bold" => $bold
+
+                    )
+                );
+
+            }
+        }
+
         public function __construct($pathHtml,$pathDocx){
 
-            $this->Log = new Katzgrau\KLogger\Logger(__DIR__.'/../logs');
+            $this->Log = new Logger(__DIR__.'/../logs');
             $this->Log->info('Clase KLogger instanciada.');
 
-            $this->Word = new \PhpOffice\PhpWord\PhpWord();
+            $this->Word = new PhpWord();
             $this->Log->info('Clase PhpWord instanciada.');
-
-            $this->HTML = new DOMDocument();
-            $this->HTML->preserveWhiteSpace = TRUE;
-            $this->Log->info('Clase DOMDocument instanciada.');
 
             $htmlPath = array();
             $docxPath = array();
@@ -43,7 +125,12 @@
                 {
                     $this->htmlPath = $htmlPath[0];
                     $this->docxPath = $docxPath[0];
-                    $this->Log->info("Parámetros correctos.");
+
+                    $this->loadHTML();
+                    $this->normalizeHTML();
+                    $this->parseHTMLToDomElements();
+                    $this->parseCssStyleToWordStyle();
+
                 }
                 else $this->Log->error("Los parámetros enviados son incorrectos.");
                 
