@@ -16,6 +16,7 @@
 
         protected $Log;
         protected $Dom;
+        protected $DomXPath;
         protected $Html;
         protected $Word;
         protected $Section;
@@ -35,26 +36,135 @@
 
         private function htmlTagToDocXObject($node)
         {
-            Html::addHtml($this->Section,$node);
-            /*if($tag=="table") $this->addDocXTable($node);
-            if($tag=="div")   $this->addDocXDiv($node);*/            
+            
+            if($node->tagName=="table") $this->addDocXTable($node);
+            if($node->tagName=="div")   $this->addDocXDiv($node);            
 
         }
 
-        private function addDocXTable($node){
-
-            /*$attributes = Array(
-                'borderColor' => '000000'
+        private function parseAttributes($node)
+        {
+            $attributes = Array();
+            $attributesNames = Array(
+                "id",
+                "name",
+                "class",
+                "style",
+                "dir",
+                "href",
+                "target",
+                "rel",
+                "download",
+                "title",
+                "alt",
+                "shape",
+                "coords",
+                "hreflang",
+                "type",
+                "source",
+                "track",
+                "src",
+                "preload",
+                "autoplay",
+                "loop",
+                "muted",
+                "controls",
+                "mediagroup",
+                "crossorigin",
+                "width",
+                "height",
+                "poster",
+                "kind",
+                "datetime",
+                "colspan",
+                "rowspan",
+                "headers",
+                "scope",
+                "abbr",
+                "name",
+                "maxlength",
+                "minlength",
+                "disabled",
+                "readonly",
+                "autocomplete",
+                "autofocus",
+                "dirname",
+                "form",
+                "placeholder",
+                "required",
+                "rows",
+                "cols",
+                "wrap",
+                "border",
+                "cellpadding",
+                "cellspacing",
+                "media",
+                "type",
+                "scoped",
+                "multiple",
+                "size",
+                "charset",
+                "async",
+                "defer",
+                "crossorigin",
+                "value",
+                "selected",
+                "disabled",
+                "label",
+                "value",
+                "reversed",
+                "start",
+                "data",
+                "typemustmatch",
+                "usemap",
+                "for"
             );
 
-            if($node->getAttribute('border')) $attributes["borderSize"] = $node->getAttribute('border');
-            if($node->getAttribute('cellpadding')) $attributes["cellPadding"] = $node->getAttribute('cellpadding');
-            if($node->getAttribute('cellspacing')) $attributes["cellSpacing"] = $node->getAttribute('cellspacing');
-            if($node->getAttribute('width')) $attributes["width"] = $node->getAttribute('width');
-            if($node->getAttribute('height')) $attributes["height"] = Converter::pixelToTwip(intval($node->getAttribute('height')));
+            foreach($attributesNames as $a) if($node->hasAttribute($a)) $attributes[$a] = $node->getAttribute($a);
 
-            $table = $this->Section->addTable([$attributes]);
-            print_r($node->children());*/
+            foreach($attributes as $a){
+                if($a=="border") $attibutes[$a] = Converter::pixelToTwip(intval($attributes[$a]));
+                if($a=="height") $attibutes[$a] = Converter::pixelToTwip(intval($attributes[$a]));
+                if($a=="cellspacing")
+                {
+                    $attributes["cellSpacing"] = Converter::pixelToTwip(intval($attributes[$a]));
+                    unset($atributes[$a]);
+                }
+                if($a=="cellpadding")
+                {
+                    $attributes["cellPadding"] = Converter::pixelToTwip(intval($attributes[$a]));
+                    unset($atributes[$a]);
+                }
+            }
+
+            return $attributes;
+        }
+        private function addDocXTable($node)
+        {
+
+            $attributes = $this->parseAttributes($node);
+            $table = $this->Section->addTable($attributes);
+            if($node->hasChildNodes()==TRUE) for($i=0;$i<$node->childNodes->count();$i++) $this->addDoxTableElement($table,$node->childNodes->item($i));
+
+        }
+
+        private function addDoxTableElement($table,$node)
+        {
+
+            $tagAvaiable = Array(
+                "tr","td"
+            );
+
+            if(array_key_exists($node->tagName,$tagAvaiable)==TRUE){
+
+                $object = null;
+                $attr = $this->parseAttributes($node);
+                if($node->tagName=="tr") $object = $table->addRow($attr["height"],$attr);
+                if($node->tagName=="td") $object = $table->addCell($attr["width"],$attr);
+                if($node->hasChildNodes()==TRUE) for($i=0;$i<$node->childNodes->count();$i++) $this->addDoxTableElement($object,$node->childNodes->item($i));
+
+            } else if($node->hasChildNodes()==TRUE) for($i=0;$i<$node->childNodes->count();$i++) $this->addDoxTableElement($table,$node->childNodes->item($i));
+            
         }
 
         private function addDocxDiv($node)
@@ -96,21 +206,28 @@
         protected function parseHTMLToDOMElements()
         {
 
-            $this->Dom = new Crawler(
-                $this->Html
-            );
-            $this->Log->info("Clase Symfony/Crawler instanciada.");
+            $this->Dom->loadHTML($this->Html);
+            $this->Dom->normalizeDocument();
+            $this->DomXPath = new DOMXpath($this->Dom);
 
-            $this->Selector = new CssSelectorConverter();
-            $this->Log->info("Clase Symfony/CSS-Selector instanciada.");
+            /*$list = $this->DomXPath->query("/html/body");
+
+            $body = $list->item(0);*/
+
+            
+
+            $this->Section = $this->Word->addSection();
+            \PhpOffice\PhpWord\Shared\Html::addHtml($this->Section, $this->Html, true, true);
 
         }
 
         protected function parseCssStyleToWordStyle()
         {
             $style = NULL;
-            $nodesStyles = $this->Dom->filter("style");
-            foreach($nodesStyles as $n) if($n->nodeName=="style") $style .= $n->nodeValue;
+
+            $list = $this->DomXPath->query("/html/head/style");
+
+            foreach($list as $n) if($n->nodeName=="style") $style .= $n->nodeValue;
             $style = trim($style);
 
             $arrayStyle = explode('.',$style);
@@ -243,6 +360,7 @@
                         $styleName,
                         $styleWord
                     );
+
                 }
 
             }
@@ -253,8 +371,8 @@
 
             $this->Section = $this->Word->addSection();
 
-            $htmlNodes = $this->Dom->filter("body");
-            foreach($htmlNodes->children() as $tag) $this->htmlTagToDocXObject($tag);
+            $body = $this->DomXPath->query("/html/body/*");
+            if($body->count()>=1) for($i=0;$i<$body->count();$i++) $this->htmlTagToDocxObject($body->item($i));
 
         }
 
@@ -274,6 +392,9 @@
 
             $this->Word = new PhpWord();
             $this->Log->info('Clase PhpWord instanciada.');
+
+            $this->Dom = new DOMDocument();
+            $this->Log->info("Clase DOMDocument instanciada.");
 
             $htmlPath = array();
             $docxPath = array();

@@ -101,9 +101,9 @@
 
             $this->parseHTMLToDomElements();
 
-            $this->parseCssStyleToWordStyle();
+            //$this->parseCssStyleToWordStyle();
 
-            $this->parteHtmlBodyToSectionWord();
+            //$this->parteHtmlBodyToSectionWord();
 
             $this->saveDocument();
 
