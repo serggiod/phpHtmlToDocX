@@ -1,6 +1,7 @@
 <?php
 
     require 'vendor/autoload.php';
+    require 'src/class.application.html.php';
     require 'src/class.application.base.php';
     require 'src/class.application.php';
 

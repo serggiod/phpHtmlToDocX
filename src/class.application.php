@@ -5,7 +5,7 @@
     use \PhpOffice\PhpWord\SimpleType\DocProtect;
     use \PhpOffice\PhpWord\Shared\Converter;
 
-    class Application extends ApplicationBase{
+    class Application extends ApplicationBase {
 
         private $fontName;
         private $fontSize;
@@ -99,11 +99,9 @@
 
             $this->normalizeHTML();
 
-            $this->parseHTMLToDomElements();
+            $this->parseCssStyleToWordStyle();
 
-            //$this->parseCssStyleToWordStyle();
-
-            //$this->parteHtmlBodyToSectionWord();
+            $this->parteHtmlBodyToSectionWord();
 
             $this->saveDocument();
 

@@ -1,11 +1,12 @@
 <?php
 
     use \Katzgrau\KLogger\Logger;
-    use \PhpOffice\PhpWord\PhpWord;
+    
     use \Symfony\Component\DomCrawler\Crawler;
     use \Symfony\Component\CssSelector\CssSelectorConverter;
+
+    use \PhpOffice\PhpWord\PhpWord;
     use \PhpOffice\PhpWord\Shared\Converter;
-    use \PhpOffice\PhpWord\Shared\Html;
     use \PhpOffice\PhpWord\SimpleType\Jc;
     use \PhpOffice\PhpWord\SimpleType\JcTable;
     use \PhpOffice\PhpWord\Style\Font;
@@ -20,11 +21,8 @@
         protected $Html;
         protected $Word;
         protected $Section;
-        protected $Selector;
+        protected $WordStyles = Array();
         protected $XMLDom;
-
-        protected $charsHTM = ['<br>','<BR>','<br/>','<BR/>','&nbsp;'];
-        protected $charsDOC = ['\n','\n','\n','\n','\ '];
 
         protected $stringHT5A = '/(<header)|(<nav)|(<section)|(<article)|(<aside)|(<footer)/i';
         protected $stringHT5B = '/(<\/header>)|(<\/nav>)|(<\/section>)|(<\/article>)|(<\/aside>)|(<\/footer>)/i';
@@ -34,144 +32,6 @@
         protected $boolPathHtml;
         protected $boolPathDocx;
 
-        private function htmlTagToDocXObject($node)
-        {
-            
-            if($node->tagName=="table") $this->addDocXTable($node);
-            if($node->tagName=="div")   $this->addDocXDiv($node);            
-
-        }
-
-        private function parseAttributes($node)
-        {
-            $attributes = Array();
-            $attributesNames = Array(
-                "id",
-                "name",
-                "class",
-                "style",
-                "dir",
-                "href",
-                "target",
-                "rel",
-                "download",
-                "title",
-                "alt",
-                "shape",
-                "coords",
-                "hreflang",
-                "type",
-                "source",
-                "track",
-                "src",
-                "preload",
-                "autoplay",
-                "loop",
-                "muted",
-                "controls",
-                "mediagroup",
-                "crossorigin",
-                "width",
-                "height",
-                "poster",
-                "kind",
-                "datetime",
-                "colspan",
-                "rowspan",
-                "headers",
-                "scope",
-                "abbr",
-                "name",
-                "maxlength",
-                "minlength",
-                "disabled",
-                "readonly",
-                "autocomplete",
-                "autofocus",
-                "dirname",
-                "form",
-                "placeholder",
-                "required",
-                "rows",
-                "cols",
-                "wrap",
-                "border",
-                "cellpadding",
-                "cellspacing",
-                "media",
-                "type",
-                "scoped",
-                "multiple",
-                "size",
-                "charset",
-                "async",
-                "defer",
-                "crossorigin",
-                "value",
-                "selected",
-                "disabled",
-                "label",
-                "value",
-                "reversed",
-                "start",
-                "data",
-                "typemustmatch",
-                "usemap",
-                "for"
-            );
-
-            foreach($attributesNames as $a) if($node->hasAttribute($a)) $attributes[$a] = $node->getAttribute($a);
-
-            foreach($attributes as $a){
-                if($a=="border") $attibutes[$a] = Converter::pixelToTwip(intval($attributes[$a]));
-                if($a=="height") $attibutes[$a] = Converter::pixelToTwip(intval($attributes[$a]));
-                if($a=="cellspacing")
-                {
-                    $attributes["cellSpacing"] = Converter::pixelToTwip(intval($attributes[$a]));
-                    unset($atributes[$a]);
-                }
-                if($a=="cellpadding")
-                {
-                    $attributes["cellPadding"] = Converter::pixelToTwip(intval($attributes[$a]));
-                    unset($atributes[$a]);
-                }
-            }
-
-            return $attributes;
-        }
-        private function addDocXTable($node)
-        {
-
-            $attributes = $this->parseAttributes($node);
-            $table = $this->Section->addTable($attributes);
-            if($node->hasChildNodes()==TRUE) for($i=0;$i<$node->childNodes->count();$i++) $this->addDoxTableElement($table,$node->childNodes->item($i));
-
-        }
-
-        private function addDoxTableElement($table,$node)
-        {
-
-            $tagAvaiable = Array(
-                "tr","td"
-            );
-
-            if(array_key_exists($node->tagName,$tagAvaiable)==TRUE){
-
-                $object = null;
-                $attr = $this->parseAttributes($node);
-                if($node->tagName=="tr") $object = $table->addRow($attr["height"],$attr);
-                if($node->tagName=="td") $object = $table->addCell($attr["width"],$attr);
-                if($node->hasChildNodes()==TRUE) for($i=0;$i<$node->childNodes->count();$i++) $this->addDoxTableElement($object,$node->childNodes->item($i));
-
-            } else if($node->hasChildNodes()==TRUE) for($i=0;$i<$node->childNodes->count();$i++) $this->addDoxTableElement($table,$node->childNodes->item($i));
-            
-        }
-
-        private function addDocxDiv($node)
-        {
-
-        }
-
         protected function loadHTML()
         {
             $this->Html = file_get_contents($this->htmlPath);
@@ -180,12 +40,6 @@
 
         protected function normalizeHTML()
         {
-
-            $this->Html = str_replace(
-                $this->charsHTM,
-                $this->charsDOC,
-                $this->Html
-            );
 
             $this->Html = preg_replace(
                 $this->stringHT5A,
@@ -199,31 +53,30 @@
                 $this->Html
             );
 
+            $this->Html = str_replace(array("\n", "\r"), '', $this->Html);
+            $this->Html = str_replace(array('&lt;', '&gt;', '&amp;'), array('_lt_', '_gt_', '_amp_'), $this->Html);
+            $this->Html = html_entity_decode($this->Html, ENT_QUOTES, 'UTF-8');
+            $this->Html = str_replace('&', '&amp;', $this->Html);
+            $this->Html = str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $this->Html);
+
+            // Implementar luego.
+            /*if (false === $fullHTML) {
+                $html = '<body>' . $html . '</body>';
+            }*/
             $this->Log->info("Se ha normatlizado el contenido html.");
-
-        }
-
-        protected function parseHTMLToDOMElements()
-        {
-
-            $this->Dom->loadHTML($this->Html);
-            $this->Dom->normalizeDocument();
-            $this->DomXPath = new DOMXpath($this->Dom);
-
-            /*$list = $this->DomXPath->query("/html/body");
-
-            $body = $list->item(0);*/
-
-            
-
-            $this->Section = $this->Word->addSection();
-            \PhpOffice\PhpWord\Shared\Html::addHtml($this->Section, $this->Html, true, true);
 
         }
 
         protected function parseCssStyleToWordStyle()
         {
             $style = NULL;
+
+            libxml_disable_entity_loader(true);
+            $this->Dom =new DOMDocument();
+            $this->Dom->preserveWhiteSpace = false;
+            $this->Dom->loadHTML($this->Html);
+
+            $this->DomXPath = new DOMXpath($this->Dom);
 
             $list = $this->DomXPath->query("/html/head/style");
 
@@ -356,11 +209,7 @@
 
                     }
 
-                    $this->Word->addFontStyle(
-                        $styleName,
-                        $styleWord
-                    );
-
+                    $this->WordStyle[$styleName] = $styleWord;
                 }
 
             }
@@ -370,9 +219,7 @@
         {
 
             $this->Section = $this->Word->addSection();
-
-            $body = $this->DomXPath->query("/html/body/*");
-            if($body->count()>=1) for($i=0;$i<$body->count();$i++) $this->htmlTagToDocxObject($body->item($i));
+            Html::addHtml($this->Section, $this->Dom, $this->DomXPath, $this->WordStyle);
 
         }
 
