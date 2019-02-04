@@ -117,7 +117,7 @@ class Html
                         $styles['width'] = Converter::pixelToTwip(intval($attribute->value));
                         break;
                     case 'height':
-                        $style['height'] = Converter::pixelToTwip(intval($attribute->value));
+                        $styles['height'] = Converter::pixelToTwip(intval($attribute->value));
                 }
             }
         }
@@ -366,7 +366,8 @@ class Html
                     $rowStyles['alignment'] = $a;
                     break;
                 case 'bgcolor':
-                    $rowStyles['bgColor'] = implode('',Converter::htmlToRgb($attribute->value));
+                    //$rowStyles['bgColor'] = implode('',Converter::htmlToRgb($attribute->value));
+                    $rowStyles['bgColor'] = str_replace('#','',$attribute->value);
                     break;
                 case 'width':
                     $rowStyles['width'] = intval($attribute->value);
@@ -408,7 +409,8 @@ class Html
                     $cellStyles['alignment'] = $a;
                     break;
                 case 'bgcolor':
-                    $cellStyles['bgColor'] = implode('',Converter::htmlToRgb($attribute->value));
+                    // $cellStyles['bgColor'] = implode('',Converter::htmlToRgb($attribute->value));
+                    $cellStyles['bgColor'] = str_replace('#','',$attribute->value);
                     break;
                 case 'width':
                     $cellStyles['width'] = Converter::pixelToTwip(intval($attribute->value));
@@ -418,7 +420,6 @@ class Html
                     $class = self::$WordStyle[$name];
                     $keys = array_keys($class);
                     foreach($keys as $key) $cellStyles[$key]=$class[$key];
-                    print_r($cellStyles);
                     break;
             }
         }
