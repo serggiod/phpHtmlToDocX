@@ -366,17 +366,19 @@ class Html
                     $rowStyles['alignment'] = $a;
                     break;
                 case 'bgcolor':
-                    $rowStyles['bgColor'] = str_replace('#','',$attribute->value);
+                    $rowStyles['bgColor'] = implode('',Converter::htmlToRgb($attribute->value));
                     break;
                 case 'width':
                     $rowStyles['width'] = intval($attribute->value);
                     break;
             }
+            
         }
         if ($node->parentNode->nodeName == 'thead') {
             $rowStyles['tblHeader'] = true;
         }
 
+        print_r($rowStyles);
         return $element->addRow(null, $rowStyles);
     }
 
@@ -392,7 +394,6 @@ class Html
     {
         $cellStyles = self::recursiveParseStylesInHierarchy($node, $styles['cell']);
         foreach($node->attributes as $attribute){
-            echo($attribute->name."=".$attribute->value."\n");
             switch($attribute->name)
             {
                 case 'align':
@@ -407,17 +408,17 @@ class Html
                     $cellStyles['alignment'] = $a;
                     break;
                 case 'bgcolor':
-                    $cellStyles['bgColor'] = str_replace('#','',$attribute->value);
+                    $cellStyles['bgColor'] = implode('',Converter::htmlToRgb($attribute->value));
                     break;
                 case 'width':
-                    $cellStyles['width'] = intval($attribute->value);
+                    $cellStyles['width'] = Converter::pixelToTwip(intval($attribute->value));
                     break;
                 case 'class':
                     $name = $attribute->value;
-                    print_r($this->WordStyle);
-                    //$class = self::WordStyle[$name];
-                    //$keys = array_keys($class);
-                    //foreach($keys as $key) $cellStyles[$key]=$class[$key];
+                    $class = self::$WordStyle[$name];
+                    $keys = array_keys($class);
+                    foreach($keys as $key) $cellStyles[$key]=$class[$key];
+                    print_r($cellStyles);
                     break;
             }
         }
